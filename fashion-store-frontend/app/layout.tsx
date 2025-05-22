@@ -1,6 +1,6 @@
 import type React from "react"
 import { Inter } from "next/font/google"
-import { ConfigProvider } from "antd"
+import { ConfigProvider, App as AntdApp } from "antd"
 import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
@@ -9,7 +9,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "Fashion Store - Online Clothing Shop",
   description: "Buy the latest fashion trends online",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -29,7 +28,7 @@ export default function RootLayout({
               },
             }}
           >
-            {children}
+            <AntdApp>{children}</AntdApp>
           </ConfigProvider>
         </ThemeProvider>
       </body>

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import Link from "next/link"
-import { Layout, Menu, Button, Typography } from "antd"
+import { Layout, Menu, Button, Typography, App } from "antd"
 import {
   DashboardOutlined,
   ShoppingOutlined,
@@ -22,45 +21,102 @@ const { Text } = Typography
 export default function DashboardSidebar() {
   const router = useRouter()
   const pathname = usePathname()
+  const { message } = App.useApp()
   const isMobile = useMobile()
   const [collapsed, setCollapsed] = useState(isMobile)
+  const [selectedKey, setSelectedKey] = useState("dashboard")
 
   useEffect(() => {
     setCollapsed(isMobile)
   }, [isMobile])
 
+  useEffect(() => {
+    // Xác định key dựa trên pathname
+    if (pathname.includes("/dashboard/customers")) {
+      setSelectedKey("customers")
+    } else if (
+      pathname.includes("/dashboard/products") ||
+      (pathname.includes("/dashboard") && pathname.includes("tab=products"))
+    ) {
+      setSelectedKey("products")
+    } else if (
+      pathname.includes("/dashboard/orders") ||
+      (pathname.includes("/dashboard") && pathname.includes("tab=orders"))
+    ) {
+      setSelectedKey("orders")
+    } else if (pathname.includes("/dashboard/settings")) {
+      setSelectedKey("settings")
+    } else {
+      setSelectedKey("dashboard")
+    }
+  }, [pathname])
+
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("userId")
     localStorage.removeItem("userRole")
+    localStorage.removeItem("storeId")
+    message.success("Đăng xuất thành công")
     router.push("/login")
+  }
+
+  const handleMenuClick = (key: string) => {
+    setSelectedKey(key)
+
+    // Chuyển hướng dựa trên key
+    switch (key) {
+      case "dashboard":
+        router.push("/dashboard")
+        break
+      case "products":
+        // Trong trường hợp này, vẫn ở trang dashboard nhưng chuyển tab
+        router.push("/dashboard?tab=products")
+        break
+      case "orders":
+        // Trong trường hợp này, vẫn ở trang dashboard nhưng chuyển tab
+        router.push("/dashboard?tab=orders")
+        break
+      case "customers":
+        router.push("/dashboard/customers")
+        break
+      case "settings":
+        router.push("/dashboard/settings")
+        break
+      default:
+        router.push("/dashboard")
+    }
   }
 
   const menuItems = [
     {
       key: "dashboard",
       icon: <DashboardOutlined />,
-      label: <Link href="/dashboard">Tổng quan</Link>,
+      label: "Tổng quan",
+      onClick: () => handleMenuClick("dashboard"),
     },
     {
       key: "products",
       icon: <AppstoreOutlined />,
-      label: <Link href="/dashboard">Sản phẩm</Link>,
+      label: "Sản phẩm",
+      onClick: () => handleMenuClick("products"),
     },
     {
       key: "orders",
       icon: <ShoppingOutlined />,
-      label: <Link href="/dashboard">Đơn hàng</Link>,
+      label: "Đơn hàng",
+      onClick: () => handleMenuClick("orders"),
     },
     {
       key: "customers",
       icon: <UserOutlined />,
-      label: <Link href="/dashboard">Khách hàng</Link>,
+      label: "Khách hàng",
+      onClick: () => handleMenuClick("customers"),
     },
     {
       key: "settings",
       icon: <SettingOutlined />,
-      label: <Link href="/dashboard">Cài đặt</Link>,
+      label: "Cài đặt",
+      onClick: () => handleMenuClick("settings"),
     },
   ]
 
@@ -73,11 +129,18 @@ export default function DashboardSidebar() {
       width={250}
       theme="light"
       trigger={null}
+      style={{
+        overflow: "auto",
+        height: "100vh",
+        position: "sticky",
+        top: 0,
+        left: 0,
+      }}
     >
       <div className="p-4 flex items-center justify-between">
         {!collapsed && (
           <Text strong className="text-lg">
-            Admin Panel
+            Quản lý cửa hàng
           </Text>
         )}
         <Button
@@ -87,7 +150,7 @@ export default function DashboardSidebar() {
         />
       </div>
 
-      <Menu mode="inline" selectedKeys={[pathname.split("/")[1] || "dashboard"]} items={menuItems} />
+      <Menu mode="inline" selectedKeys={[selectedKey]} items={menuItems} className="border-r-0" />
 
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <Button type="primary" danger icon={<LogoutOutlined />} onClick={handleLogout} block>

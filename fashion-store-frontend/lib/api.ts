@@ -49,7 +49,14 @@ export const fetchStoreByUserId = async (userId: number) => {
     throw new Error("Failed to fetch store")
   }
 
-  return await response.json()
+  const storeData = await response.json()
+
+  // Lưu storeId vào localStorage để sử dụng ở các trang khác
+  if (storeData && storeData.length > 0) {
+    localStorage.setItem("storeId", storeData[0].id)
+  }
+
+  return storeData
 }
 
 // Products
@@ -212,20 +219,118 @@ export const fetchOrder = async (orderId: number) => {
   return await response.json()
 }
 
-export const updateOrderStatus = async (orderId: number, trang_thai: string) => {
-  const response = await fetch(`http://localhost:3000/api/order/${orderId}/status`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      trang_thai,
-    }),
+// Cập nhật hàm updateOrderStatus để sử dụng API mới
+export const updateOrderStatus = async (orderId: number, newStatus: string) => {
+  try {
+    const response = await fetch(`http://localhost:3000/api/order/${orderId}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        trang_thai: newStatus,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to update order status")
+    }
+
+    return true
+  } catch (error) {
+    console.error("Failed to update order status:", error)
+    throw new Error("Failed to update order status")
+  }
+}
+
+// Lấy danh sách đơn hàng của cửa hàng
+// Cập nhật hàm fetchStoreOrders để sử dụng API mới
+export const fetchStoreOrders = async () => {
+  try {
+    const response = await fetch(`http://localhost:3000/api/orders`)
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch orders")
+    }
+
+    const ordersData = await response.json()
+
+    // Chuyển đổi dữ liệu nếu cần
+    return ordersData.map((order: any) => ({
+      id: order.id,
+      nguoi_dung_id: order.nguoi_dung_id,
+      trang_thai: order.trang_thai,
+      tong_tien: order.tong_tien,
+      ngay_dat: order.ngay_dat,
+    }))
+  } catch (error) {
+    console.error("Failed to fetch orders:", error)
+    throw new Error("Failed to fetch orders")
+  }
+}
+
+// Lấy danh sách khách hàng của cửa hàng
+export const fetchStoreCustomers = async (storeId: number) => {
+  const response = await fetch(`http://localhost:3000/api/store/${storeId}/customers`)
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch store customers")
+  }
+
+  return await response.json()
+}
+
+// Lấy số lượng khách hàng của cửa hàng
+export const fetchStoreCustomerCount = async (storeId: number) => {
+  const response = await fetch(`http://localhost:3000/api/store/${storeId}/customer-count`)
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch customer count")
+  }
+
+  return await response.json()
+}
+
+// Lấy danh sách đơn hàng của một khách hàng cụ thể
+export const fetchCustomerOrders = async (storeId: number, customerId: number) => {
+  const response = await fetch(`http://localhost:3000/api/store/${storeId}/customer/${customerId}/orders`)
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch customer orders")
+  }
+
+  return await response.json()
+}
+
+// Añadir la nueva función para obtener el resumen de pedidos de los clientes
+export const fetchCustomersOrdersSummary = async () => {
+  try {
+    const response = await fetch(`http://localhost:3000/api/customers/orders-summary`)
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch customers orders summary")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Failed to fetch customers orders summary:", error)
+    throw new Error("Failed to fetch customers orders summary")
+  }
+}
+
+// Función para subir una imagen
+export const uploadImage = async (imageFile: File) => {
+  const formData = new FormData()
+  formData.append("image", imageFile)
+
+  const response = await fetch("http://localhost:3000/api/images/upload", {
+    method: "POST",
+    body: formData,
   })
 
   if (!response.ok) {
-    throw new Error("Failed to update order status")
+    throw new Error("Failed to upload image")
   }
 
-  return true
+  return await response.json()
 }

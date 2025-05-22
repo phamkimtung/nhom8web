@@ -5,13 +5,50 @@ const dotenv = require('dotenv');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const { v2: cloudinary } = require('cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+cloudinary.config({
+  cloud_name: 'dnnudi0kr',
+  api_key: '618554135849492',
+  api_secret: 'DU5erxbBwiE6vfqtPC-SDy2z0FA',
+});
 
+// Cấu hình storage cho multer để upload lên Cloudinary trong folder 'products'
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'products',
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 500, height: 500, crop: 'limit' }],
+  },
+});
+
+const upload = multer({ storage });
+
+// API upload ảnh
+app.post('/api/images/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Image uploaded successfully',
+      imageUrl: req.file.path, // link ảnh trên Cloudinary
+    });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
@@ -208,6 +245,16 @@ app.post('/api/order', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Lấy tất cả đơn hàng
+app.get("/api/orders", async (req, res) => {
+  try {
+    const orders = await pool.query("SELECT * FROM don_hang");
+    res.json(orders.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
 
 app.get('/api/order/:id', async (req, res) => {
   try {
@@ -291,4 +338,78 @@ app.get('/api/user/:id/search-history', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+app.get('/api/store/:id/customers', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DISTINCT nd.id, nd.ten_dang_nhap, nd.email
+      FROM nguoi_dung nd
+      JOIN don_hang dh ON dh.nguoi_dung_id = nd.id
+      JOIN chi_tiet_don_hang ct ON ct.don_hang_id = dh.id
+      JOIN san_pham sp ON sp.id = ct.san_pham_id
+      WHERE sp.cua_hang_id = $1
+    `, [req.params.id]);
+
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get('/api/store/:storeId/customer/:customerId/orders', async (req, res) => {
+  try {
+    const { storeId, customerId } = req.params;
+    const result = await pool.query(`
+      SELECT dh.*, ct.*, sp.ten AS ten_san_pham
+      FROM don_hang dh
+      JOIN chi_tiet_don_hang ct ON ct.don_hang_id = dh.id
+      JOIN san_pham sp ON sp.id = ct.san_pham_id
+      WHERE dh.nguoi_dung_id = $1 AND sp.cua_hang_id = $2
+      ORDER BY dh.ngay_dat DESC
+    `, [customerId, storeId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get('/api/store/:id/customer-count', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT COUNT(DISTINCT nd.id) AS so_luong_khach
+      FROM nguoi_dung nd
+      JOIN don_hang dh ON dh.nguoi_dung_id = nd.id
+      JOIN chi_tiet_don_hang ct ON ct.don_hang_id = dh.id
+      JOIN san_pham sp ON sp.id = ct.san_pham_id
+      WHERE sp.cua_hang_id = $1
+    `, [req.params.id]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get("/api/customers/orders-summary", async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        nd.id,
+        nd.ten,
+        nd.email,
+        nd.so_dien_thoai,
+        COUNT(dh.id) AS tong_don,
+        COUNT(CASE WHEN dh.trang_thai = 'đang giao' THEN 1 END) AS dang_giao,
+        COUNT(CASE WHEN dh.trang_thai = 'hoàn thành' THEN 1 END) AS hoan_thanh,
+        COUNT(CASE WHEN dh.trang_thai = 'đã huỷ' THEN 1 END) AS da_huy
+      FROM nguoi_dung nd
+      LEFT JOIN don_hang dh ON dh.khach_hang_id = nd.id
+      WHERE nd.vai_tro = 'khach_hang'
+      GROUP BY nd.id, nd.ten, nd.email, nd.so_dien_thoai
+      ORDER BY nd.ten ASC
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Lỗi server khi lấy danh sách khách hàng" });
+  }
 });

@@ -4,10 +4,10 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Layout, Typography, Spin, Tabs, App } from "antd"
 import DashboardSidebar from "@/components/dashboard-sidebar"
-import DashboardOverview from "./components/overview"
-import DashboardProducts from "./components/products"
-import DashboardOrders from "./components/orders"
-import { useDashboardData } from "./hooks/use-dashboard-data"
+import DashboardOverview from "../components/overview"
+import DashboardProducts from "../components/products"
+import DashboardOrders from "../components/orders"
+import { useDashboardData } from "../hooks/use-dashboard-data"
 
 const { Content } = Layout
 const { Title } = Typography

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Form, Input, Button, Card, Typography, message, Radio } from "antd"
+import { Form, Input, Button, Card, Typography, Radio, App } from "antd"
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons"
 import { register } from "@/lib/api"
 
@@ -11,6 +11,7 @@ const { Title } = Typography
 
 export default function Register() {
   const router = useRouter()
+  const { message } = App.useApp()
   const [loading, setLoading] = useState(false)
 
   const onFinish = async (values: any) => {
