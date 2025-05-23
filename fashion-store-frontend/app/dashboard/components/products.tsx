@@ -7,6 +7,7 @@ import type { ProductWithInventory } from "../hooks/use-dashboard-data"
 import InventoryForm from "./inventory-form"
 import type { Product } from "@/types/product"
 import type { RcFile } from "antd/es/upload/interface"
+import { createProduct } from "@/lib/api"
 
 const { Option } = Select
 
@@ -88,6 +89,31 @@ export default function DashboardProducts({
     }
   }
 
+  const addNewProduct = async (productData: any) => {
+    if (!storeId) {
+      message.error("Không tìm thấy thông tin cửa hàng")
+      return null
+    }
+
+    try {
+      const newProduct = await createProduct({
+        ...productData,
+        cua_hang_id: storeId,
+      })
+
+      message.success("Thêm sản phẩm thành công")
+
+      // Reload the page to refresh the product list
+      window.location.reload()
+
+      return newProduct
+    } catch (error) {
+      console.error("Failed to add product:", error)
+      message.error("Không thể thêm sản phẩm")
+      return null
+    }
+  }
+
   const handleOk = async () => {
     try {
       const values = await form.validateFields()
@@ -103,12 +129,12 @@ export default function DashboardProducts({
           // Cập nhật sản phẩm hiện có
           await updateProduct(selectedProduct.id, values)
         } else if (storeId) {
-          // Tạo sản phẩm mới - Chức năng này đã được chuyển sang hook
-          message.info("Chức năng thêm sản phẩm đã được chuyển sang hook")
+          // Tạo sản phẩm mới
+          await addNewProduct(values)
         }
         setIsModalVisible(false)
       } catch (error) {
-        message.error("Không thể tải lên hình ảnh")
+        message.error("Không thể tải lên hình ảnh hoặc lưu sản phẩm")
       }
     } catch (error) {
       console.error("Form validation failed:", error)

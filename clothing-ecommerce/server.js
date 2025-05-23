@@ -140,15 +140,31 @@ app.get('/api/user/:id/store', async (req, res) => {
   }
 });
 
-app.put('/api/store/:id', async (req, res) => {
-  const { ten_cua_hang, mo_ta, dia_chi } = req.body;
+app.get("/api/products", async (req, res) => {
   try {
-    await pool.query('UPDATE cua_hang SET ten_cua_hang = $1, mo_ta = $2, dia_chi = $3 WHERE id = $4', [ten_cua_hang, mo_ta, dia_chi, req.params.id]);
-    res.sendStatus(204);
+    const query = `
+      SELECT 
+        sp.id,
+        sp.ten,
+        sp.mo_ta,
+        sp.gia,
+        sp.danh_muc,
+        sp.duong_dan_anh,
+        sp.tao_luc,
+        ch.ten_cua_hang,
+        ch.id AS cua_hang_id
+      FROM san_pham sp
+      JOIN cua_hang ch ON ch.id = sp.cua_hang_id
+      ORDER BY sp.tao_luc DESC
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err.message);
+    res.status(500).json({ error: "Lỗi server khi lấy danh sách sản phẩm" });
   }
 });
+
 
 // PRODUCT
 app.post('/api/product', async (req, res) => {
@@ -393,23 +409,55 @@ app.get("/api/customers/orders-summary", async (req, res) => {
     const query = `
       SELECT 
         nd.id,
-        nd.ten,
+        nd.ten_dang_nhap AS ten,
         nd.email,
-        nd.so_dien_thoai,
         COUNT(dh.id) AS tong_don,
-        COUNT(CASE WHEN dh.trang_thai = 'đang giao' THEN 1 END) AS dang_giao,
-        COUNT(CASE WHEN dh.trang_thai = 'hoàn thành' THEN 1 END) AS hoan_thanh,
-        COUNT(CASE WHEN dh.trang_thai = 'đã huỷ' THEN 1 END) AS da_huy
+        COUNT(CASE WHEN dh.trang_thai = 'cho_duyet' THEN 1 END) AS cho_duyet,
+        COUNT(CASE WHEN dh.trang_thai = 'dang_xu_ly' THEN 1 END) AS dang_giao,
+        COUNT(CASE WHEN dh.trang_thai = 'hoan_thanh' THEN 1 END) AS hoan_thanh,
+        COUNT(CASE WHEN dh.trang_thai = 'da_huy' THEN 1 END) AS da_huy
       FROM nguoi_dung nd
-      LEFT JOIN don_hang dh ON dh.khach_hang_id = nd.id
+      LEFT JOIN don_hang dh ON dh.nguoi_dung_id = nd.id
       WHERE nd.vai_tro = 'khach_hang'
-      GROUP BY nd.id, nd.ten, nd.email, nd.so_dien_thoai
-      ORDER BY nd.ten ASC
+      GROUP BY nd.id, nd.ten_dang_nhap, nd.email
+      ORDER BY nd.ten_dang_nhap ASC
     `;
     const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: "Lỗi server khi lấy danh sách khách hàng" });
+  }
+});
+app.get("/api/customers/:id/order-history", async (req, res) => {
+  const customerId = req.params.id;
+
+  try {
+    const query = `
+      SELECT 
+        dh.id AS don_hang_id,
+        dh.ngay_dat,
+        dh.tong_tien,
+        dh.trang_thai,
+        json_agg(json_build_object(
+          'san_pham_id', sp.id,
+          'ten_san_pham', sp.ten,
+          'kich_co', ctdh.kich_co,
+          'so_luong', ctdh.so_luong,
+          'gia', ctdh.gia,
+          'anh', sp.duong_dan_anh
+        )) AS san_pham
+      FROM don_hang dh
+      JOIN chi_tiet_don_hang ctdh ON ctdh.don_hang_id = dh.id
+      JOIN san_pham sp ON sp.id = ctdh.san_pham_id
+      WHERE dh.nguoi_dung_id = $1
+      GROUP BY dh.id
+      ORDER BY dh.ngay_dat DESC
+    `;
+    const result = await pool.query(query, [customerId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Lỗi server khi lấy lịch sử đơn hàng" });
   }
 });

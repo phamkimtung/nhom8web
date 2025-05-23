@@ -292,14 +292,19 @@ export const fetchStoreCustomerCount = async (storeId: number) => {
 }
 
 // Lấy danh sách đơn hàng của một khách hàng cụ thể
-export const fetchCustomerOrders = async (storeId: number, customerId: number) => {
-  const response = await fetch(`http://localhost:3000/api/store/${storeId}/customer/${customerId}/orders`)
+export const fetchCustomerOrders = async (customerId: number) => {
+  try {
+    const response = await fetch(`http://localhost:3000/api/customers/${customerId}/order-history`)
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch customer orders")
+    if (!response.ok) {
+      throw new Error("Failed to fetch customer orders")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("Failed to fetch customer orders:", error)
+    throw error
   }
-
-  return await response.json()
 }
 
 // Añadir la nueva función para obtener el resumen de pedidos de los clientes
