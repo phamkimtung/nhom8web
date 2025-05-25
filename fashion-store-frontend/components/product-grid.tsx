@@ -47,7 +47,6 @@ export default function ProductGrid({ products }: ProductGridProps) {
                     <Text className="text-red-500 font-bold block">
                       {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(product.gia)}
                     </Text>
-                    <Text className="block text-gray-500 truncate">{product.danh_muc}</Text>
                     <Rate disabled defaultValue={4} className="text-sm" />
                   </div>
                 }

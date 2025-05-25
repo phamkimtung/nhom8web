@@ -7,7 +7,7 @@ import ProductGrid from "@/components/product-grid"
 import Footer from "@/components/footer"
 import HeroBanner from "@/components/hero-banner"
 import type { Product } from "@/types/product"
-import { fetchProducts } from "@/lib/api"
+import { fetchAllProducts } from "@/lib/api"
 
 const { Content } = Layout
 const { Title } = Typography
@@ -20,9 +20,8 @@ export default function Home() {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        // In a real app, you would fetch from all stores
-        // For demo purposes, we'll fetch from store ID 1
-        const data = await fetchProducts(1)
+        // Sử dụng API mới để lấy tất cả sản phẩm từ tất cả cửa hàng
+        const data = await fetchAllProducts()
         setProducts(data)
       } catch (error) {
         console.error("Failed to fetch products:", error)

@@ -48,10 +48,10 @@ export default function DashboardOrders({ orders, updateOrderStatus }: Dashboard
         (order) =>
           order.trang_thai === filters.status ||
           // Hỗ trợ cả tên trạng thái tiếng Việt
-          (filters.status === "pending" && order.trang_thai === "cho_duyet") ||
-          (filters.status === "processing" && order.trang_thai === "dang_xu_ly") ||
-          (filters.status === "completed" && order.trang_thai === "hoan_thanh") ||
-          (filters.status === "cancelled" && order.trang_thai === "da_huy"),
+          (filters.status === "cho_duyet" && order.trang_thai === "cho_duyet") ||
+          (filters.status === "dang_xu_ly" && order.trang_thai === "dang_xu_ly") ||
+          (filters.status === "hoan_thanh" && order.trang_thai === "hoan_thanh") ||
+          (filters.status === "da_huy" && order.trang_thai === "da_huy"),
       )
     }
 
@@ -82,16 +82,16 @@ export default function DashboardOrders({ orders, updateOrderStatus }: Dashboard
     const getStatusText = (status: string) => {
       switch (status) {
         case "cho_duyet":
-        case "pending":
+        case "cho_duyet":
           return "Chờ duyệt"
         case "dang_xu_ly":
-        case "processing":
+        case "dang_xu_ly":
           return "Đang xử lý"
         case "hoan_thanh":
-        case "completed":
+        case "hoan_thanh":
           return "Hoàn thành"
         case "da_huy":
-        case "cancelled":
+        case "da_huy":
           return "Đã hủy"
         default:
           return status
@@ -130,22 +130,22 @@ export default function DashboardOrders({ orders, updateOrderStatus }: Dashboard
 
     switch (status) {
       case "cho_duyet":
-      case "pending":
+      case "cho_duyet":
         color = "orange"
         text = "Chờ duyệt"
         break
       case "dang_xu_ly":
-      case "processing":
+      case "dang_xu_ly":
         color = "blue"
         text = "Đang xử lý"
         break
       case "hoan_thanh":
-      case "completed":
+      case "hoan_thanh":
         color = "green"
         text = "Hoàn thành"
         break
       case "da_huy":
-      case "cancelled":
+      case "da_huy":
         color = "red"
         text = "Đã hủy"
         break
@@ -186,18 +186,18 @@ export default function DashboardOrders({ orders, updateOrderStatus }: Dashboard
       key: "trang_thai",
       render: (status: string) => getStatusTag(status),
       filters: [
-        { text: "Chờ duyệt", value: "pending" },
-        { text: "Đang xử lý", value: "processing" },
-        { text: "Hoàn thành", value: "completed" },
-        { text: "Đã hủy", value: "cancelled" },
+        { text: "Chờ duyệt", value: "cho_duyet" },
+        { text: "Đang xử lý", value: "dang_xu_ly" },
+        { text: "Hoàn thành", value: "hoan_thanh" },
+        { text: "Đã hủy", value: "da_huy" },
       ],
       onFilter: (value: Key | boolean, record: Order) => {
         const stringValue = String(value)
-        if (stringValue === "pending") return record.trang_thai === "cho_duyet" || record.trang_thai === "pending"
-        if (stringValue === "processing")
-          return record.trang_thai === "dang_xu_ly" || record.trang_thai === "processing"
-        if (stringValue === "completed") return record.trang_thai === "hoan_thanh" || record.trang_thai === "completed"
-        if (stringValue === "cancelled") return record.trang_thai === "da_huy" || record.trang_thai === "cancelled"
+        if (stringValue === "cho_duyet") return record.trang_thai === "cho_duyet" || record.trang_thai === "cho_duyet"
+        if (stringValue === "dang_xu_ly")
+          return record.trang_thai === "dang_xu_ly" || record.trang_thai === "dang_xu_ly"
+        if (stringValue === "hoan_thanh") return record.trang_thai === "hoan_thanh" || record.trang_thai === "hoan_thanh"
+        if (stringValue === "da_huy") return record.trang_thai === "da_huy" || record.trang_thai === "da_huy"
         return true
       },
     },
@@ -210,23 +210,23 @@ export default function DashboardOrders({ orders, updateOrderStatus }: Dashboard
             Chi tiết
           </Button>
 
-          {(record.trang_thai === "cho_duyet" || record.trang_thai === "pending") && (
-            <Button type="default" onClick={() => updateOrderStatus(record.id, "processing")} size="small">
+          {(record.trang_thai === "cho_duyet" || record.trang_thai === "cho_duyet") && (
+            <Button type="default" onClick={() => updateOrderStatus(record.id, "dang_xu_ly")} size="small">
               Duyệt đơn
             </Button>
           )}
 
-          {(record.trang_thai === "dang_xu_ly" || record.trang_thai === "processing") && (
-            <Button type="default" onClick={() => updateOrderStatus(record.id, "completed")} size="small">
+          {(record.trang_thai === "dang_xu_ly" || record.trang_thai === "dang_xu_ly") && (
+            <Button type="default" onClick={() => updateOrderStatus(record.id, "hoan_thanh")} size="small">
               Hoàn thành
             </Button>
           )}
 
           {(record.trang_thai === "cho_duyet" ||
-            record.trang_thai === "pending" ||
+            record.trang_thai === "cho_duyet" ||
             record.trang_thai === "dang_xu_ly" ||
-            record.trang_thai === "processing") && (
-            <Button danger onClick={() => updateOrderStatus(record.id, "cancelled")} size="small">
+            record.trang_thai === "dang_xu_ly") && (
+            <Button danger onClick={() => updateOrderStatus(record.id, "da_huy")} size="small">
               Hủy đơn
             </Button>
           )}

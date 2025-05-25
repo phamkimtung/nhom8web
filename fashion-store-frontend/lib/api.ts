@@ -339,3 +339,53 @@ export const uploadImage = async (imageFile: File) => {
 
   return await response.json()
 }
+// Thêm hàm này vào cuối file, trước export cuối cùng
+export const fetchAllProducts = async () => {
+  const response = await fetch("http://localhost:3000/api/products")
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch all products")
+  }
+
+  return await response.json()
+}
+export const fetchOrderDetails = async (orderId: number) => {
+  const response = await fetch(`http://localhost:3000/api/orders/${orderId}/details`)
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch order details")
+  }
+
+  return await response.json()
+}
+// Thêm hàm này để lấy doanh thu
+export const fetchRevenue = async () => {
+  const response = await fetch("http://localhost:3000/api/orders/revenue")
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch revenue")
+  }
+
+  return await response.json()
+}
+// Thêm hàm này để lấy thống kê đơn hàng theo tuần
+export const fetchWeeklyOrderStats = async () => {
+  const response = await fetch("http://localhost:3000/api/orders/weekly-stats")
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch weekly order stats")
+  }
+
+  return await response.json()
+}
+
+// Thêm hàm này để lấy thống kê theo tuần (7 tuần gần nhất)
+export const fetchWeeklySummary = async () => {
+  const response = await fetch("http://localhost:3000/api/statistics/weekly-summary")
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch weekly summary")
+  }
+
+  return await response.json()
+}

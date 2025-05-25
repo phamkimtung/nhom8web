@@ -17,6 +17,7 @@ import {
   addProductInventory,
   updateInventory as apiUpdateInventory,
   updateOrderStatus as apiUpdateOrderStatus,
+  fetchRevenue,
 } from "@/lib/api"
 
 export interface ProductWithInventory extends Product {
@@ -106,11 +107,15 @@ export function useDashboardData() {
         }
         setOrderStats(stats)
 
-        // Tính tổng doanh thu từ đơn hàng hoàn thành
-        const revenue = ordersData
-          .filter((order: Order) => order.trang_thai === "hoan_thanh" || order.trang_thai === "completed")
-          .reduce((sum: number, order: Order) => sum + order.tong_tien, 0)
-        setTotalRevenue(revenue)
+        // Thay thế phần tính doanh thu cũ bằng:
+        // Lấy doanh thu từ API
+        try {
+          const revenueData = await fetchRevenue()
+          setTotalRevenue(Number(revenueData.tong_doanh_thu) || 0)
+        } catch (error) {
+          console.error("Failed to fetch revenue:", error)
+          setTotalRevenue(0)
+        }
 
         // Lấy số lượng khách hàng
         try {
@@ -326,3 +331,6 @@ export function useDashboardData() {
     updateOrderStatus,
   }
 }
+
+// Añade esta línea al final del archivo para asegurar que la exportación sea correcta
+export default useDashboardData

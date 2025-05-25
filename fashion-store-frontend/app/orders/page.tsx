@@ -2,12 +2,27 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Layout, Typography, Spin, Table, Tag, Button, Card, Empty, message } from "antd"
-import { ShoppingOutlined } from "@ant-design/icons"
+import {
+  Layout,
+  Typography,
+  Spin,
+  Table,
+  Tag,
+  Button,
+  Card,
+  Empty,
+  message,
+  Modal,
+  Descriptions,
+  List,
+  Avatar,
+  Divider,
+} from "antd"
+import { ShoppingOutlined, EyeOutlined } from "@ant-design/icons"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import type { Order } from "@/types/order"
-import { fetchUserOrders } from "@/lib/api"
+import { fetchUserOrders, fetchOrderDetails } from "@/lib/api"
 
 const { Content } = Layout
 const { Title } = Typography
@@ -16,6 +31,10 @@ export default function Orders() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+  const [orderDetails, setOrderDetails] = useState<any>(null)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [modalLoading, setModalLoading] = useState(false)
 
   useEffect(() => {
     const userId = localStorage.getItem("userId")
@@ -70,6 +89,22 @@ export default function Orders() {
     }
   }
 
+  const handleViewDetails = async (orderId: number) => {
+    setSelectedOrderId(orderId)
+    setModalVisible(true)
+    setModalLoading(true)
+
+    try {
+      const details = await fetchOrderDetails(orderId)
+      setOrderDetails(details)
+    } catch (error) {
+      console.error("Failed to fetch order details:", error)
+      message.error("Không thể tải chi tiết đơn hàng")
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
   const columns = [
     {
       title: "Mã đơn hàng",
@@ -97,10 +132,12 @@ export default function Orders() {
     {
       title: "Hành động",
       key: "action",
-      render: (_, record: Order) => (
-        <Button type="link" onClick={() => router.push(`/order/${record.id}`)}>
-          Chi tiết
-        </Button>
+      render: (_: any, record: Order) => (
+        <div className="space-x-2">
+          <Button type="primary" icon={<EyeOutlined />} onClick={() => handleViewDetails(record.id)}>
+            Chi tiết
+          </Button>
+        </div>
       ),
     },
   ]
@@ -121,7 +158,6 @@ export default function Orders() {
               columns={columns}
               dataSource={orders.map((order) => ({ ...order, key: order.id }))}
               pagination={{ pageSize: 10 }}
-              responsive={true}
             />
           </Card>
         ) : (
@@ -135,6 +171,78 @@ export default function Orders() {
         )}
       </Content>
       <Footer />
+      {/* Modal chi tiết đơn hàng */}
+      <Modal
+        title={`Chi tiết đơn hàng #${selectedOrderId}`}
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {modalLoading ? (
+          <div className="flex justify-center py-10">
+            <Spin size="large" />
+          </div>
+        ) : orderDetails ? (
+          <>
+            <Descriptions bordered column={1} className="mb-4">
+              <Descriptions.Item label="Mã đơn hàng">{orderDetails.don_hang_id}</Descriptions.Item>
+              <Descriptions.Item label="Ngày đặt">
+                {new Date(orderDetails.ngay_dat).toLocaleDateString("vi-VN")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tổng tiền">
+                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(orderDetails.tong_tien)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag color={getStatusColor(orderDetails.trang_thai)}>{getStatusText(orderDetails.trang_thai)}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Khách hàng">{orderDetails.ten_dang_nhap}</Descriptions.Item>
+              <Descriptions.Item label="Email">{orderDetails.email}</Descriptions.Item>
+            </Descriptions>
+
+            <Divider />
+
+            <Typography.Title level={5}>Chi tiết sản phẩm</Typography.Title>
+            <List
+              itemLayout="horizontal"
+              dataSource={orderDetails.chi_tiet_san_pham}
+              renderItem={(item: any) => (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={
+                      <Avatar
+                        shape="square"
+                        size={64}
+                        src={item.duong_dan_anh || "/placeholder.svg?height=64&width=64"}
+                      />
+                    }
+                    title={item.ten_san_pham}
+                    description={
+                      <>
+                        <div>Kích cỡ: {item.kich_co}</div>
+                        <div>Số lượng: {item.so_luong}</div>
+                        <div>
+                          Giá: {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(item.gia)}
+                        </div>
+                        <div>
+                          Thành tiền:{" "}
+                          {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+                            item.gia * item.so_luong,
+                          )}
+                        </div>
+                      </>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </>
+        ) : (
+          <div className="text-center py-5">
+            <Typography.Text>Không tìm thấy thông tin đơn hàng</Typography.Text>
+          </div>
+        )}
+      </Modal>
     </Layout>
   )
 }

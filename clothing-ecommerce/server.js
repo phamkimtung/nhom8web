@@ -461,3 +461,85 @@ app.get("/api/customers/:id/order-history", async (req, res) => {
     res.status(500).json({ error: "Lỗi server khi lấy lịch sử đơn hàng" });
   }
 });
+app.get("/api/orders/:orderId/details", async (req, res) => {
+  const orderId = req.params.orderId;
+
+  try {
+    const query = `
+      SELECT 
+        dh.id AS don_hang_id,
+        dh.ngay_dat,
+        dh.tong_tien,
+        dh.trang_thai,
+        nd.id AS nguoi_dung_id,
+        nd.ten_dang_nhap,
+        nd.email,
+        json_agg(json_build_object(
+          'san_pham_id', sp.id,
+          'ten_san_pham', sp.ten,
+          'gia', ctdh.gia,
+          'kich_co', ctdh.kich_co,
+          'so_luong', ctdh.so_luong,
+          'duong_dan_anh', sp.duong_dan_anh
+        )) AS chi_tiet_san_pham
+      FROM don_hang dh
+      JOIN nguoi_dung nd ON nd.id = dh.nguoi_dung_id
+      JOIN chi_tiet_don_hang ctdh ON ctdh.don_hang_id = dh.id
+      JOIN san_pham sp ON sp.id = ctdh.san_pham_id
+      WHERE dh.id = $1
+      GROUP BY dh.id, nd.id, nd.ten_dang_nhap, nd.email
+    `;
+
+    const result = await pool.query(query, [orderId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Lỗi server khi lấy chi tiết đơn hàng" });
+  }
+});
+app.get("/api/orders/revenue", async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        COUNT(*) AS so_don_hoan_thanh,
+        SUM(tong_tien) AS tong_doanh_thu
+      FROM don_hang
+      WHERE trang_thai = 'hoan_thanh'
+    `;
+
+    const result = await pool.query(query);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Lỗi khi tính doanh thu:", err);
+    res.status(500).json({ error: "Lỗi server khi tính doanh thu" });
+  }
+});
+app.get("/api/statistics/weekly-summary", async (req, res) => {
+  try {
+    const query = `
+      WITH don_hoan_thanh_trong_tuan AS (
+        SELECT * FROM don_hang
+        WHERE trang_thai = 'hoan_thanh'
+          AND ngay_dat >= date_trunc('week', CURRENT_DATE)
+          AND ngay_dat < date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
+      )
+      SELECT
+        COUNT(dh.id) AS so_don_hoan_thanh,
+        COALESCE(SUM(ctdh.so_luong), 0) AS so_san_pham_ban_ra,
+        COALESCE(SUM(dh.tong_tien), 0) AS tong_doanh_thu
+      FROM don_hoan_thanh_trong_tuan dh
+      LEFT JOIN chi_tiet_don_hang ctdh ON ctdh.don_hang_id = dh.id
+    `;
+
+    const result = await pool.query(query);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Lỗi khi thống kê tuần:", err);
+    res.status(500).json({ error: "Lỗi server khi thống kê tuần" });
+  }
+});

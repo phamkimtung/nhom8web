@@ -39,10 +39,10 @@ export default function OrderFilter({ onFilter }: OrderFilterProps) {
 
           <Form.Item name="status" label="Trạng thái">
             <Select placeholder="Chọn trạng thái" allowClear>
-              <Option value="pending">Chờ duyệt</Option>
-              <Option value="processing">Đang xử lý</Option>
-              <Option value="completed">Hoàn thành</Option>
-              <Option value="cancelled">Đã hủy</Option>
+              <Option value="cho_duyet">Chờ duyệt</Option>
+              <Option value="dang_xu_ly">Đang xử lý</Option>
+              <Option value="hoan_thanh">Hoàn thành</Option>
+              <Option value="da_huy">Đã hủy</Option>
             </Select>
           </Form.Item>
 
