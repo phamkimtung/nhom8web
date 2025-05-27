@@ -8,8 +8,13 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const Replicate = require("replicate");
+const { writeFile } = require('fs/promises');
 
 dotenv.config();
+
+
+
 
 const app = express();
 app.use(cors());
@@ -718,3 +723,30 @@ app.get('/api/danh-gia/tong-quan', async (req, res) => {
     res.status(500).json({ error: 'Lỗi server khi lấy tổng quan đánh giá' });
   }
 });
+app.get("/api/anh", async (req, res) => {
+  try {
+    const input = {
+      garm_img:
+        "https://replicate.delivery/pbxt/KgwTlZyFx5aUU3gc5gMiKuD5nNPTgliMlLUWx160G4z99YjO/sweater.webp",
+      human_img:
+        "https://replicate.delivery/pbxt/KgwTlhCMvDagRrcVzZJbuozNJ8esPqiNAIJS3eMgHrYuHmW4/KakaoTalk_Photo_2024-04-04-21-44-45.png",
+      garment_des: "cute pink top",
+    };
+
+    const output = await replicate.run(
+      "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
+      { input }
+    );
+
+    // output là URL -> fetch ảnh
+    const imageResponse = await fetch(output); // Nếu lỗi, import 'node-fetch'
+    const buffer = await imageResponse.arrayBuffer();
+    await writeFile("output.jpg", Buffer.from(buffer));
+
+    res.send("Image saved as output.jpg");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Có lỗi xảy ra");
+  }
+});
+

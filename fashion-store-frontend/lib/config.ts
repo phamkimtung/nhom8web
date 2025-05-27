@@ -38,3 +38,4 @@ export const PRODUCT_SIZES = [
   { value: "XL", label: "XL" },
   { value: "XXL", label: "XXL" },
 ]
+
