@@ -2,6 +2,7 @@
 
 import { Row, Col, Card, Statistic, Progress, Tag, Table, Tabs, Typography } from "antd"
 import { ShoppingOutlined, InboxOutlined, DollarOutlined, UserOutlined } from "@ant-design/icons"
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime"
 import type { ProductWithInventory, OrderStats } from "../hooks/use-dashboard-data"
 import type { Order } from "@/types/order"
@@ -156,6 +157,72 @@ export default function DashboardOverview({
     },
   ]
 
+  // Dữ liệu cho biểu đồ tròn
+  const pieChartData = [
+    {
+      name: "Chờ duyệt",
+      value: orderStats.cho_duyet,
+      color: "#fa8c16",
+    },
+    {
+      name: "Đang xử lý",
+      value: orderStats.dang_xu_ly,
+      color: "#1890ff",
+    },
+    {
+      name: "Hoàn thành",
+      value: orderStats.hoan_thanh,
+      color: "#52c41a",
+    },
+    {
+      name: "Đã hủy",
+      value: orderStats.da_huy,
+      color: "#f5222d",
+    },
+  ].filter((item) => item.value > 0) // Chỉ hiển thị các trạng thái có giá trị > 0
+
+  // Custom label cho pie chart
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent < 0.05) return null // Không hiển thị label nếu phần trăm quá nhỏ
+
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? "start" : "end"}
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    )
+  }
+
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0]
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-medium" style={{ color: data.payload.color }}>
+            {data.name}: {data.value} đơn hàng
+          </p>
+          <p className="text-sm text-gray-600">
+            {orderStats.total > 0 ? ((data.value / orderStats.total) * 100).toFixed(1) : 0}% tổng số đơn hàng
+          </p>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
     <>
       {/* Thống kê chính */}
@@ -255,48 +322,93 @@ export default function DashboardOverview({
         </Col>
       </Row>
 
-      {/* Thống kê đơn hàng theo trạng thái */}
+      {/* Biểu đồ tròn thống kê đơn hàng theo trạng thái */}
       <Card title="Thống kê đơn hàng theo trạng thái" className="mb-6">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="bg-orange-50 border-orange-200">
-              <Statistic title="Chờ duyệt" value={orderStats.cho_duyet} valueStyle={{ color: "#fa8c16" }} />
-              <Progress
-                percent={orderStats.total ? Math.round((orderStats.cho_duyet / orderStats.total) * 100) : 0}
-                size="small"
-                strokeColor="#fa8c16"
-              />
-            </Card>
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={12}>
+            <div className="h-80">
+              {orderStats.total > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={renderCustomizedLabel}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      formatter={(value, entry: any) => (
+                        <span style={{ color: entry.color }}>
+                          {value} ({entry.payload.value})
+                        </span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <Text type="secondary">Chưa có đơn hàng nào</Text>
+                </div>
+              )}
+            </div>
           </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="bg-blue-50 border-blue-200">
-              <Statistic title="Đang xử lý" value={orderStats.dang_xu_ly} valueStyle={{ color: "#1890ff" }} />
-              <Progress
-                percent={orderStats.total ? Math.round((orderStats.dang_xu_ly / orderStats.total) * 100) : 0}
-                size="small"
-                strokeColor="#1890ff"
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="bg-green-50 border-green-200">
-              <Statistic title="Hoàn thành" value={orderStats.hoan_thanh} valueStyle={{ color: "#52c41a" }} />
-              <Progress
-                percent={orderStats.total ? Math.round((orderStats.hoan_thanh / orderStats.total) * 100) : 0}
-                size="small"
-                strokeColor="#52c41a"
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card className="bg-red-50 border-red-200">
-              <Statistic title="Đã hủy" value={orderStats.da_huy} valueStyle={{ color: "#f5222d" }} />
-              <Progress
-                percent={orderStats.total ? Math.round((orderStats.da_huy / orderStats.total) * 100) : 0}
-                size="small"
-                strokeColor="#f5222d"
-              />
-            </Card>
+          <Col xs={24} lg={12}>
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <div className="text-3xl font-bold text-blue-600 mb-2">{orderStats.total}</div>
+                <Text className="text-gray-600">Tổng số đơn hàng</Text>
+              </div>
+
+              <Row gutter={[16, 16]}>
+                <Col xs={12} sm={12}>
+                  <Card className="bg-orange-50 border-orange-200 text-center">
+                    <div className="text-2xl font-bold text-orange-600 mb-1">{orderStats.cho_duyet}</div>
+                    <Text className="text-orange-600">Chờ duyệt</Text>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {orderStats.total ? ((orderStats.cho_duyet / orderStats.total) * 100).toFixed(1) : 0}%
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={12}>
+                  <Card className="bg-blue-50 border-blue-200 text-center">
+                    <div className="text-2xl font-bold text-blue-600 mb-1">{orderStats.dang_xu_ly}</div>
+                    <Text className="text-blue-600">Đang xử lý</Text>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {orderStats.total ? ((orderStats.dang_xu_ly / orderStats.total) * 100).toFixed(1) : 0}%
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={12}>
+                  <Card className="bg-green-50 border-green-200 text-center">
+                    <div className="text-2xl font-bold text-green-600 mb-1">{orderStats.hoan_thanh}</div>
+                    <Text className="text-green-600">Hoàn thành</Text>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {orderStats.total ? ((orderStats.hoan_thanh / orderStats.total) * 100).toFixed(1) : 0}%
+                    </div>
+                  </Card>
+                </Col>
+                <Col xs={12} sm={12}>
+                  <Card className="bg-red-50 border-red-200 text-center">
+                    <div className="text-2xl font-bold text-red-600 mb-1">{orderStats.da_huy}</div>
+                    <Text className="text-red-600">Đã hủy</Text>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {orderStats.total ? ((orderStats.da_huy / orderStats.total) * 100).toFixed(1) : 0}%
+                    </div>
+                  </Card>
+                </Col>
+              </Row>
+            </div>
           </Col>
         </Row>
       </Card>

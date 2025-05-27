@@ -368,23 +368,137 @@ export const fetchRevenue = async () => {
 
   return await response.json()
 }
-// Thêm hàm này để lấy thống kê đơn hàng theo tuần
-export const fetchWeeklyOrderStats = async () => {
-  const response = await fetch("http://localhost:3000/api/orders/weekly-stats")
+// // Thêm hàm này để lấy thống kê đơn hàng theo tuần
+// export const fetchWeeklyOrderStats = async () => {
+//   const response = await fetch("http://localhost:3000/api/orders/weekly-stats")
+
+//   if (!response.ok) {
+//     throw new Error("Failed to fetch weekly order stats")
+//   }
+
+//   return await response.json()
+// }
+
+// // Thêm hàm này để lấy thống kê theo tuần (7 tuần gần nhất)
+// export const fetchWeeklySummary = async () => {
+//   const response = await fetch("http://localhost:3000/api/statistics/weekly-summary")
+
+//   if (!response.ok) {
+//     throw new Error("Failed to fetch weekly summary")
+//   }
+
+//   return await response.json()
+// }
+
+// Thêm hàm này để lấy đơn hàng theo khoảng ngày
+export const fetchOrdersByDateRange = async (startDate: string, endDate: string) => {
+  const response = await fetch(`http://localhost:3000/api/don-hang/theo-ngay?startDate=${startDate}&endDate=${endDate}`)
 
   if (!response.ok) {
-    throw new Error("Failed to fetch weekly order stats")
+    throw new Error("Failed to fetch orders by date range")
+  }
+
+  return await response.json()
+}
+// Thêm các hàm API cho đánh giá sản phẩm
+export const createProductReview = async (
+  nguoi_dung_id: number,
+  san_pham_id: number,
+  so_sao: number,
+  noi_dung?: string,
+) => {
+  const response = await fetch("http://localhost:3000/api/danh-gia/san-pham", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      nguoi_dung_id,
+      san_pham_id,
+      so_sao,
+      noi_dung,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to create review")
   }
 
   return await response.json()
 }
 
-// Thêm hàm này để lấy thống kê theo tuần (7 tuần gần nhất)
-export const fetchWeeklySummary = async () => {
-  const response = await fetch("http://localhost:3000/api/statistics/weekly-summary")
+// export const fetchProductReviews = async (productId: number) => {
+//   const response = await fetch(`http://localhost:3000/api/san-pham/${productId}/danh-gia`)
+
+//   if (!response.ok) {
+//     throw new Error("Failed to fetch product reviews")
+//   }
+
+//   return await response.json()
+// }
+// ===== THÊM CÁC API CHO ĐÁNH GIÁ =====
+
+// Tạo đánh giá mới
+export const createReview = async (reviewData: {
+  nguoi_dung_id: number
+  san_pham_id: number
+  so_sao: number
+  noi_dung?: string
+}) => {
+  const response = await fetch("http://localhost:3000/api/danh-gia", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(reviewData),
+  })
 
   if (!response.ok) {
-    throw new Error("Failed to fetch weekly summary")
+    throw new Error("Failed to create review")
+  }
+
+  return await response.json()
+}
+
+// Lấy danh sách đánh giá của sản phẩm
+export const fetchProductReviews = async (productId: number) => {
+  const response = await fetch(`http://localhost:3000/api/san-pham/${productId}/danh-gia`)
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch product reviews")
+  }
+
+  return await response.json()
+}
+
+// Kiểm tra xem người dùng đã đánh giá sản phẩm chưa
+export const checkUserReview = async (userId: number, productId: number) => {
+  const response = await fetch(
+    `http://localhost:3000/api/danh-gia/check?nguoi_dung_id=${userId}&san_pham_id=${productId}`,
+  )
+
+  if (!response.ok) {
+    throw new Error("Failed to check user review")
+  }
+
+  return await response.json()
+}
+// Lấy tất cả đánh giá (cho trang quản lý)
+export const fetchAllReviews = async () => {
+  const response = await fetch("http://localhost:3000/api/xem-danh-gia")
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch all reviews")
+  }
+
+  return await response.json()
+}
+// Lấy tổng quan đánh giá (4 đánh giá mới nhất + đánh giá trung bình)
+export const fetchReviewsOverview = async () => {
+  const response = await fetch("http://localhost:3000/api/danh-gia/tong-quan")
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch reviews overview")
   }
 
   return await response.json()

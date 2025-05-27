@@ -21,6 +21,7 @@ import Footer from "@/components/footer"
 import type { Product } from "@/types/product"
 import type { Inventory } from "@/types/inventory"
 import { fetchProduct, fetchProductInventory, createOrder } from "@/lib/api"
+import ProductReviews from "@/components/product-reviews"
 
 const { Content } = Layout
 const { Title, Paragraph } = Typography
@@ -202,6 +203,8 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
             <Descriptions.Item label="Mã sản phẩm">{product.id}</Descriptions.Item>
           </Descriptions>
         </Card>
+
+        <ProductReviews productId={product.id} averageRating={product.danh_gia_trung_binh || 0} />
       </Content>
       <Footer />
     </Layout>

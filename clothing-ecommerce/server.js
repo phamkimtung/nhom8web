@@ -151,6 +151,7 @@ app.get("/api/products", async (req, res) => {
         sp.danh_muc,
         sp.duong_dan_anh,
         sp.tao_luc,
+        sp.danh_gia_trung_binh,
         ch.ten_cua_hang,
         ch.id AS cua_hang_id
       FROM san_pham sp
@@ -541,5 +542,179 @@ app.get("/api/statistics/weekly-summary", async (req, res) => {
   } catch (err) {
     console.error("Lỗi khi thống kê tuần:", err);
     res.status(500).json({ error: "Lỗi server khi thống kê tuần" });
+  }
+});
+app.get("/api/don-hang/theo-ngay", async (req, res) => {
+  const { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: "Thiếu ngày bắt đầu hoặc kết thúc" });
+  }
+
+  try {
+    const query = `
+      SELECT 
+        dh.*, 
+        nd.ten_dang_nhap AS ten_khach_hang,
+        nd.email
+      FROM don_hang dh
+      JOIN nguoi_dung nd ON dh.nguoi_dung_id = nd.id
+      WHERE dh.ngay_dat BETWEEN $1 AND $2
+      ORDER BY dh.ngay_dat DESC
+    `;
+    const values = [startDate, endDate];
+    const result = await pool.query(query, values);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Lỗi truy vấn đơn hàng theo ngày:", err);
+    res.status(500).json({ error: "Lỗi server khi lấy đơn hàng theo ngày" });
+  }
+});
+
+
+//đánh giá
+app.post("/api/danh-gia/san-pham", async (req, res) => {
+  const { nguoi_dung_id, san_pham_id, so_sao, noi_dung } = req.body;
+
+  // Kiểm tra dữ liệu đầu vào
+  if (!nguoi_dung_id || !san_pham_id || !so_sao) {
+    return res.status(400).json({ error: "Thiếu thông tin bắt buộc" });
+  }
+
+  try {
+    const query = `
+      INSERT INTO danh_gia (nguoi_dung_id, san_pham_id, so_sao, noi_dung)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+    const values = [nguoi_dung_id, san_pham_id, so_sao, noi_dung || null];
+    const result = await pool.query(query, values);
+
+    return res.status(201).json({
+      message: "Đánh giá sản phẩm thành công",
+      danh_gia: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Lỗi đánh giá sản phẩm:", err);
+    return res.status(500).json({ error: "Lỗi máy chủ" });
+  }
+});
+app.get("/api/san-pham/:id/danh-gia", async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const query = `
+      SELECT d.*, nd.ten_dang_nhap 
+      FROM danh_gia d
+      LEFT JOIN nguoi_dung nd ON d.nguoi_dung_id = nd.id
+      WHERE d.san_pham_id = $1
+      ORDER BY d.tao_luc DESC
+    `;
+    const result = await pool.query(query, [id]);
+    
+    return res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Lỗi lấy đánh giá:", err);
+    return res.status(500).json({ error: "Lỗi máy chủ" });
+  }
+});
+
+
+
+// POST /api/danh-gia
+app.post('/api/danh-gia', async (req, res) => {
+  const { nguoi_dung_id, san_pham_id, so_sao, noi_dung } = req.body;
+
+  if (!nguoi_dung_id || !san_pham_id || !so_sao) {
+    return res.status(400).json({ error: 'Thiếu thông tin đánh giá' });
+  }
+
+  try {
+    // 1. Thêm đánh giá vào bảng danh_gia
+    await pool.query(
+      `INSERT INTO danh_gia (nguoi_dung_id, san_pham_id, so_sao, noi_dung)
+       VALUES ($1, $2, $3, $4)`,
+      [nguoi_dung_id, san_pham_id, so_sao, noi_dung || null]
+    );
+
+    // 2. Tính lại điểm trung bình đánh giá
+    const result = await pool.query(
+      `SELECT ROUND(AVG(so_sao)::NUMERIC, 2) AS diem_trung_binh
+       FROM danh_gia
+       WHERE san_pham_id = $1`,
+      [san_pham_id]
+    );
+
+    const diemTrungBinh = result.rows[0].diem_trung_binh || 0;
+
+    // 3. Cập nhật bảng san_pham với điểm trung bình mới
+    await pool.query(
+      `UPDATE san_pham
+       SET danh_gia_trung_binh = $1
+       WHERE id = $2`,
+      [diemTrungBinh, san_pham_id]
+    );
+
+    res.json({ message: 'Đánh giá thành công', diem_trung_binh: diemTrungBinh });
+  } catch (error) {
+    console.error('Lỗi khi đánh giá sản phẩm:', error);
+    res.status(500).json({ error: 'Lỗi server khi đánh giá sản phẩm' });
+  }
+});
+
+
+// GET /api/danh-gia
+app.get('/api/xem-danh-gia', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT dg.id, dg.so_sao, dg.noi_dung, dg.tao_luc,
+             nd.id AS nguoi_dung_id, nd.ten_dang_nhap AS ten_nguoi_dung,
+             sp.id AS san_pham_id, sp.ten AS ten_san_pham,
+             sp.duong_dan_anh AS anh_san_pham
+      FROM danh_gia dg
+      JOIN nguoi_dung nd ON dg.nguoi_dung_id = nd.id
+      JOIN san_pham sp ON dg.san_pham_id = sp.id
+      ORDER BY dg.tao_luc DESC
+    `);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Lỗi khi lấy đánh giá:', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy đánh giá' });
+  }
+});
+// GET /api/danh-gia/tong-quan
+app.get('/api/danh-gia/tong-quan', async (req, res) => {
+  try {
+    const latestReviewsQuery = `
+      SELECT dg.id, dg.so_sao, dg.noi_dung, dg.tao_luc,
+             nd.ten_dang_nhap AS ten_nguoi_dung,
+             sp.ten AS ten_san_pham,
+             sp.duong_dan_anh AS anh_san_pham
+      FROM danh_gia dg
+      JOIN nguoi_dung nd ON dg.nguoi_dung_id = nd.id
+      JOIN san_pham sp ON dg.san_pham_id = sp.id
+      ORDER BY dg.tao_luc DESC
+      LIMIT 4
+    `;
+
+    const avgStarsQuery = `
+      SELECT ROUND(AVG(so_sao)::numeric, 2) AS danh_gia_trung_binh
+      FROM danh_gia
+    `;
+
+    const [latestResult, avgResult] = await Promise.all([
+      pool.query(latestReviewsQuery),
+      pool.query(avgStarsQuery)
+    ]);
+
+    res.json({
+      danh_gia_moi_nhat: latestResult.rows,
+      danh_gia_trung_binh: avgResult.rows[0].danh_gia_trung_binh
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy tổng quan đánh giá:', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy tổng quan đánh giá' });
   }
 });

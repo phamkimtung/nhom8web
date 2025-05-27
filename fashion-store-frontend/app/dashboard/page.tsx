@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Layout, Typography, Spin, Tabs, App } from "antd"
+import { Layout, Typography, Spin, App } from "antd"
 import DashboardSidebar from "@/components/dashboard-sidebar"
 import DashboardOverview from "./components/overview"
 import DashboardProducts from "./components/products"
 import DashboardOrders from "./components/orders"
-import { useDashboardData } from "./hooks/use-dashboard-data"
+import useDashboardData from "./hooks/use-dashboard-data"
 
 const { Content } = Layout
 const { Title } = Typography
@@ -46,19 +46,6 @@ export default function Dashboard() {
     }
   }, [searchParams])
 
-  // Cập nhật URL khi chuyển tab
-  const handleTabChange = useCallback(
-    (key: string) => {
-      setActiveTab(key)
-      if (key === "overview") {
-        router.push("/dashboard")
-      } else {
-        router.push(`/dashboard?tab=${key}`)
-      }
-    },
-    [router],
-  )
-
   useEffect(() => {
     const userId = localStorage.getItem("userId")
     const userRole = localStorage.getItem("userRole")
@@ -85,32 +72,24 @@ export default function Dashboard() {
     )
   }
 
+  const getPageTitle = () => {
+    switch (activeTab) {
+      case "products":
+        return "Quản lý sản phẩm"
+      case "orders":
+        return "Quản lý đơn hàng"
+      default:
+        return "Tổng quan cửa hàng"
+    }
+  }
+
   return (
     <Layout className="min-h-screen">
       <DashboardSidebar />
       <Layout className="site-layout">
         <Content className="p-4 sm:p-6 lg:p-8">
-          <div className="flex justify-between items-center mb-6">
-            <Title level={2}>Quản lý cửa hàng</Title>
-            <Tabs
-              activeKey={activeTab}
-              onChange={handleTabChange}
-              type="card"
-              items={[
-                {
-                  key: "overview",
-                  label: "Tổng quan",
-                },
-                {
-                  key: "products",
-                  label: "Sản phẩm",
-                },
-                {
-                  key: "orders",
-                  label: "Đơn hàng",
-                },
-              ]}
-            />
+          <div className="mb-6">
+            <Title level={2}>{getPageTitle()}</Title>
           </div>
 
           {activeTab === "overview" && (

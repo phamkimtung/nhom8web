@@ -1,205 +1,119 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Layout, Typography, Input, Spin, Empty, Select, Pagination } from "antd"
-import { SearchOutlined } from "@ant-design/icons"
+import { Layout, Typography, Spin } from "antd"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import ProductCard from "@/components/product-card"
-import { API_URL, PRODUCT_CATEGORIES } from "@/lib/config"
-import { MessageContainer, useMessage } from "@/lib/message-utils"
+import ProductFilter from "@/components/product-filter"
+import ProductList from "@/components/product-list"
+import type { Product } from "@/types/product"
+import { fetchAllProducts } from "@/lib/api"
 
 const { Content } = Layout
 const { Title } = Typography
-const { Search } = Input
-const { Option } = Select
-
-interface Product {
-  id: number
-  ten: string
-  mo_ta: string
-  gia: number
-  danh_muc: string
-  duong_dan_anh: string
-}
 
 export default function ProductsPage() {
-  const { message } = useMessage()
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [category, setCategory] = useState<string>("")
-  const [sortBy, setSortBy] = useState<string>("default")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [error, setError] = useState<string | null>(null)
-
-  const pageSize = 12
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const loadProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/products`)
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch products")
-        }
-
-        const data = await response.json()
+        const data = await fetchAllProducts()
         setProducts(data)
         setFilteredProducts(data)
       } catch (error) {
-        console.error("Error fetching products:", error)
-        setError("Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.")
+        console.error("Failed to fetch products:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProducts()
+    loadProducts()
   }, [])
-
-  // Lọc và sắp xếp sản phẩm khi có thay đổi
-  useEffect(() => {
-    let result = [...products]
-
-    // Lọc theo tên
-    if (searchTerm) {
-      result = result.filter((product) => product.ten.toLowerCase().includes(searchTerm.toLowerCase()))
-    }
-
-    // Lọc theo danh mục
-    if (category) {
-      result = result.filter((product) => product.danh_muc === category)
-    }
-
-    // Sắp xếp
-    switch (sortBy) {
-      case "price-asc":
-        result.sort((a, b) => a.gia - b.gia)
-        break
-      case "price-desc":
-        result.sort((a, b) => b.gia - a.gia)
-        break
-      case "name-asc":
-        result.sort((a, b) => a.ten.localeCompare(b.ten))
-        break
-      case "name-desc":
-        result.sort((a, b) => b.ten.localeCompare(a.ten))
-        break
-      default:
-        // Giữ nguyên thứ tự
-        break
-    }
-
-    setFilteredProducts(result)
-    setCurrentPage(1) // Reset về trang đầu tiên khi lọc
-  }, [products, searchTerm, category, sortBy])
 
   const handleSearch = (value: string) => {
     setSearchTerm(value)
+    filterProducts(value, null, null, null)
   }
 
-  const handleCategoryChange = (value: string) => {
-    setCategory(value)
+  const handleFilter = (category: string | null, priceRange: [number, number] | null, sortBy: string | null) => {
+    filterProducts(searchTerm, category, priceRange, sortBy)
   }
 
-  const handleSortChange = (value: string) => {
-    setSortBy(value)
-  }
+  const filterProducts = (
+    search: string,
+    category: string | null,
+    priceRange: [number, number] | null,
+    sortBy: string | null,
+  ) => {
+    let result = [...products]
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-  }
+    // Lọc theo tìm kiếm
+    if (search) {
+      result = result.filter((product) => product.ten.toLowerCase().includes(search.toLowerCase()))
+    }
 
-  // Phân trang
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    // Lọc theo danh mục
+    if (category && category !== "all") {
+      result = result.filter((product) => product.danh_muc.toLowerCase() === category.toLowerCase())
+    }
 
-  if (loading) {
-    return (
-      <Layout className="min-h-screen">
-        <Navbar />
-        <Content className="p-4 sm:p-6 lg:p-8 flex justify-center items-center">
-          <Spin size="large" />
-        </Content>
-        <Footer />
-      </Layout>
-    )
+    // Lọc theo khoảng giá
+    if (priceRange) {
+      result = result.filter((product) => product.gia >= priceRange[0] && product.gia <= priceRange[1])
+    }
+
+    // Sắp xếp
+    if (sortBy) {
+      switch (sortBy) {
+        case "price_asc":
+          result.sort((a, b) => a.gia - b.gia)
+          break
+        case "price_desc":
+          result.sort((a, b) => b.gia - a.gia)
+          break
+        case "name_asc":
+          result.sort((a, b) => a.ten.localeCompare(b.ten))
+          break
+        case "name_desc":
+          result.sort((a, b) => b.ten.localeCompare(a.ten))
+          break
+        case "newest":
+          result.sort((a, b) => new Date(b.tao_luc).getTime() - new Date(a.tao_luc).getTime())
+          break
+        default:
+          break
+      }
+    }
+
+    setFilteredProducts(result)
   }
 
   return (
     <Layout className="min-h-screen">
-      <Navbar />
-      <MessageContainer />
-      <Content className="p-4 sm:p-6 lg:p-8">
-        <div className="mb-8">
-          <Title level={2} className="mb-6">
-            Tất cả sản phẩm
-          </Title>
-
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <Search
-              placeholder="Tìm kiếm sản phẩm..."
-              allowClear
-              enterButton={<SearchOutlined />}
-              size="large"
-              onSearch={handleSearch}
-              className="md:w-1/2"
-            />
-
-            <div className="flex flex-1 gap-4">
-              <Select
-                placeholder="Danh mục"
-                allowClear
-                style={{ width: "100%" }}
-                onChange={handleCategoryChange}
-                size="large"
-              >
-                {PRODUCT_CATEGORIES.map((cat) => (
-                  <Option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </Option>
-                ))}
-              </Select>
-
-              <Select
-                placeholder="Sắp xếp theo"
-                style={{ width: "100%" }}
-                onChange={handleSortChange}
-                size="large"
-                defaultValue="default"
-              >
-                <Option value="default">Mặc định</Option>
-                <Option value="price-asc">Giá: Thấp đến cao</Option>
-                <Option value="price-desc">Giá: Cao đến thấp</Option>
-                <Option value="name-asc">Tên: A-Z</Option>
-                <Option value="name-desc">Tên: Z-A</Option>
-              </Select>
-            </div>
+      <Navbar onSearch={handleSearch} />
+      <Content className="px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <Title level={2}>Tất cả sản phẩm</Title>
+            <p className="text-gray-600">Khám phá bộ sưu tập thời trang đa dạng của chúng tôi</p>
           </div>
 
-          {error ? (
-            <Empty description={error} image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          ) : filteredProducts.length === 0 ? (
-            <Empty description="Không tìm thấy sản phẩm nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Spin size="large" />
+            </div>
           ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {paginatedProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+            <div className="space-y-6">
+              {/* Bộ lọc nằm ngang */}
+              <ProductFilter onFilter={handleFilter} totalProducts={filteredProducts.length} />
 
-              <div className="mt-8 flex justify-center">
-                <Pagination
-                  current={currentPage}
-                  total={filteredProducts.length}
-                  pageSize={pageSize}
-                  onChange={handlePageChange}
-                  showSizeChanger={false}
-                />
-              </div>
-            </>
+              {/* Danh sách sản phẩm */}
+              <ProductList products={filteredProducts} />
+            </div>
           )}
         </div>
       </Content>

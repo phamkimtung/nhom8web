@@ -47,7 +47,7 @@ export default function OrderFilter({ onFilter }: OrderFilterProps) {
           </Form.Item>
 
           <Form.Item name="dateRange" label="Ngày đặt">
-            <RangePicker style={{ width: "100%" }} />
+            <RangePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
           </Form.Item>
 
           <Form.Item name="customerId" label="Mã khách hàng">

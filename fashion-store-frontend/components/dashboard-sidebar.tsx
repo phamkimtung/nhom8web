@@ -8,7 +8,7 @@ import {
   ShoppingOutlined,
   AppstoreOutlined,
   UserOutlined,
-  SettingOutlined,
+  StarOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
@@ -34,6 +34,8 @@ export default function DashboardSidebar() {
     // Xác định key dựa trên pathname
     if (pathname.includes("/dashboard/customers")) {
       setSelectedKey("customers")
+    } else if (pathname.includes("/dashboard/reviews")) {
+      setSelectedKey("reviews")
     } else if (
       pathname.includes("/dashboard/products") ||
       (pathname.includes("/dashboard") && pathname.includes("tab=products"))
@@ -44,8 +46,6 @@ export default function DashboardSidebar() {
       (pathname.includes("/dashboard") && pathname.includes("tab=orders"))
     ) {
       setSelectedKey("orders")
-    } else if (pathname.includes("/dashboard/settings")) {
-      setSelectedKey("settings")
     } else {
       setSelectedKey("dashboard")
     }
@@ -79,8 +79,8 @@ export default function DashboardSidebar() {
       case "customers":
         router.push("/dashboard/customers")
         break
-      case "settings":
-        router.push("/dashboard/settings")
+      case "reviews":
+        router.push("/dashboard/reviews")
         break
       default:
         router.push("/dashboard")
@@ -113,10 +113,10 @@ export default function DashboardSidebar() {
       onClick: () => handleMenuClick("customers"),
     },
     {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "Cài đặt",
-      onClick: () => handleMenuClick("settings"),
+      key: "reviews",
+      icon: <StarOutlined />,
+      label: "Xem đánh giá",
+      onClick: () => handleMenuClick("reviews"),
     },
   ]
 

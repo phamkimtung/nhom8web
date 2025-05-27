@@ -70,7 +70,7 @@ export default function Navbar({ onSearch }: NavbarProps) {
 
   const menuItems = [
     { key: "home", label: <Link href="/">Trang chủ</Link> },
-    { key: "products", label: <Link href="/">Sản phẩm</Link> },
+    { key: "products", label: <Link href="/products">Sản phẩm</Link> },
     { key: "about", label: <Link href="/">Giới thiệu</Link> },
     { key: "contact", label: <Link href="/">Liên hệ</Link> },
   ]
