@@ -503,3 +503,37 @@ export const fetchReviewsOverview = async () => {
 
   return await response.json()
 }
+
+
+
+export const tryOnClothes = async (humanImage: File, productImageUrl: string, garmentDescription?: string) => {
+  const formData = new FormData()
+
+  // Thêm ảnh người dùng
+  formData.append("humanImg", humanImage)
+
+  // Thêm URL ảnh sản phẩm
+  formData.append("garmImg", productImageUrl)
+
+  // Thêm mô tả sản phẩm
+  if (garmentDescription) {
+    formData.append("garment_des", garmentDescription)
+  }
+
+  const response = await fetch("http://localhost:3000/api/tryon", {
+    method: "POST",
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to process try-on")
+  }
+
+  const result = await response.json()
+
+  return {
+    message: result.message,
+    imageUrl: result.outputImage, // URL ảnh kết quả từ Replicate
+    humanImg: result.humanImg, // URL ảnh người dùng đã upload lên Cloudinary
+  }
+}

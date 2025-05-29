@@ -10,6 +10,8 @@ const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const Replicate = require("replicate");
 const { writeFile } = require('fs/promises');
+const fs = require("fs/promises");
+
 
 dotenv.config();
 
@@ -723,14 +725,50 @@ app.get('/api/danh-gia/tong-quan', async (req, res) => {
     res.status(500).json({ error: 'Lỗi server khi lấy tổng quan đánh giá' });
   }
 });
-app.get("/api/anh", async (req, res) => {
+
+
+// //api thử đồ
+// app.get("/api/anh", async (req, res) => {
+//   try {
+//     const input = {
+//       garm_img:
+//         "https://replicate.delivery/pbxt/KgwTlZyFx5aUU3gc5gMiKuD5nNPTgliMlLUWx160G4z99YjO/sweater.webp",
+//       human_img:
+//         "https://replicate.delivery/pbxt/KgwTlhCMvDagRrcVzZJbuozNJ8esPqiNAIJS3eMgHrYuHmW4/KakaoTalk_Photo_2024-04-04-21-44-45.png",
+//       garment_des: "cute pink top",
+//     };
+
+//     const output = await replicate.run(
+//       "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
+//       { input }
+//     );
+
+//     // output là URL -> fetch ảnh
+//     const imageResponse = await fetch(output); // Nếu lỗi, import 'node-fetch'
+//     const buffer = await imageResponse.arrayBuffer();
+//     await writeFile("output.jpg", Buffer.from(buffer));
+
+//     res.send("Image saved as output.jpg");
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Có lỗi xảy ra");
+//   }
+// });
+app.post("/api/anh", upload.single("human_img"), async (req, res) => {
   try {
+    const { garment_des, garm_img } = req.body;
+    const human_img_path = req.file.path;
+
+    // Chuyển ảnh human thành base64
+    const fileBuffer = await fs.readFile(human_img_path);
+    const ext = path.extname(req.file.originalname).slice(1); // ví dụ: 'png'
+    const base64Human = `data:image/${ext};base64,${fileBuffer.toString("base64")}`;
+
+    // Tạo input cho replicate
     const input = {
-      garm_img:
-        "https://replicate.delivery/pbxt/KgwTlZyFx5aUU3gc5gMiKuD5nNPTgliMlLUWx160G4z99YjO/sweater.webp",
-      human_img:
-        "https://replicate.delivery/pbxt/KgwTlhCMvDagRrcVzZJbuozNJ8esPqiNAIJS3eMgHrYuHmW4/KakaoTalk_Photo_2024-04-04-21-44-45.png",
-      garment_des: "cute pink top",
+      garm_img: garm_img,             // là URL → dùng trực tiếp
+      human_img: base64Human,        // là base64 của ảnh upload
+      garment_des: garment_des || "default description",
     };
 
     const output = await replicate.run(
@@ -738,15 +776,82 @@ app.get("/api/anh", async (req, res) => {
       { input }
     );
 
-    // output là URL -> fetch ảnh
-    const imageResponse = await fetch(output); // Nếu lỗi, import 'node-fetch'
+    // Lấy ảnh từ kết quả output (URL)
+    const imageResponse = await fetch(output);
     const buffer = await imageResponse.arrayBuffer();
-    await writeFile("output.jpg", Buffer.from(buffer));
+    await fs.writeFile("output.jpg", Buffer.from(buffer));
+
+    // Xoá file upload tạm
+    await fs.unlink(human_img_path);
 
     res.send("Image saved as output.jpg");
   } catch (err) {
-    console.error(err);
+    console.error("Lỗi:", err);
     res.status(500).send("Có lỗi xảy ra");
+  }
+});
+
+
+app.post('/api/thu-do', upload.single('humanImg'), async (req, res) => {
+  try {
+    // 1️⃣ Kiểm tra ảnh người
+    if (!req.file || !req.file.path) {
+      console.log('❌ Không có ảnh người được upload');
+      return res.status(400).json({ error: 'Ảnh người (humanImg) không hợp lệ' });
+    }
+    const humanImgUrl = req.file.path;
+    console.log('✅ humanImg URL:', humanImgUrl);
+
+    // 2️⃣ Kiểm tra link ảnh sản phẩm
+    const garmImgUrl = req.body.garmImg;
+    if (!garmImgUrl || !garmImgUrl.startsWith('http')) {
+      console.log('❌ Link ảnh quần áo không hợp lệ:', garmImgUrl);
+      return res.status(400).json({ error: 'Link ảnh quần áo (garmImg) không hợp lệ' });
+    }
+    console.log('✅ garmImg URL:', garmImgUrl);
+
+    // 3️⃣ Garment description (nếu có)
+    const garmDesc = req.body.garmentDes || 'a garment';
+    console.log('✅ garmentDes:', garmDesc);
+
+    // 4️⃣ Gọi Replicate API
+    console.log('📤 Gửi request đến Replicate...');
+    const output = await replicate.run(
+      "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
+      {
+        input: {
+          human_img: humanImgUrl,
+          garm_img: garmImgUrl,
+          garment_des: garmDesc,
+        },
+      }
+    );
+
+    console.log('✅ Replicate trả về:', output);
+
+    // 5️⃣ Kiểm tra kết quả
+    if (!output || typeof output !== 'string') {
+      console.log('❌ Kết quả từ Replicate không phải là link ảnh:', output);
+      return res.status(500).json({
+        success: false,
+        message: 'Replicate không trả về ảnh đúng định dạng',
+        output,
+      });
+    }
+
+    // ✅ Trả về ảnh thử đồ
+    return res.json({
+      success: true,
+      outputImage: output,
+    });
+
+  } catch (error) {
+    console.error('❌ Lỗi khi thử đồ:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Đã xảy ra lỗi khi thử đồ',
+      error: error.message,
+    });
   }
 });
 
