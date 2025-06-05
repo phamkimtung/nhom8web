@@ -77,7 +77,7 @@ export default function Orders() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "cho_duyet":
-        return "Chờ duyệt"
+        return "Ch��� duyệt"
       case "dang_xu_ly":
         return "Đang xử lý"
       case "hoan_thanh":
