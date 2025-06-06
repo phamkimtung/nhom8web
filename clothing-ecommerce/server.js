@@ -159,6 +159,7 @@ app.get("/api/products", async (req, res) => {
         sp.duong_dan_anh,
         sp.tao_luc,
         sp.danh_gia_trung_binh,
+        sp.mo_ta_ai_thu_do,
         ch.ten_cua_hang,
         ch.id AS cua_hang_id
       FROM san_pham sp
@@ -176,18 +177,29 @@ app.get("/api/products", async (req, res) => {
 
 // PRODUCT
 app.post('/api/product', async (req, res) => {
-  const { cua_hang_id, ten, mo_ta, gia, danh_muc, duong_dan_anh } = req.body;
+  const {
+    cua_hang_id,
+    ten,
+    mo_ta,
+    gia,
+    danh_muc,
+    duong_dan_anh,
+    mo_ta_ai_thu_do // thêm trường này
+  } = req.body;
+
   try {
     const result = await pool.query(
-      'INSERT INTO san_pham (cua_hang_id, ten, mo_ta, gia, danh_muc, duong_dan_anh, tao_luc) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *',
-      [cua_hang_id, ten, mo_ta, gia, danh_muc, duong_dan_anh]
+      `INSERT INTO san_pham 
+      (cua_hang_id, ten, mo_ta, gia, danh_muc, duong_dan_anh, mo_ta_ai_thu_do, tao_luc) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
+      RETURNING *`,
+      [cua_hang_id, ten, mo_ta, gia, danh_muc, duong_dan_anh, mo_ta_ai_thu_do]
     );
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 app.get('/api/product/:id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM san_pham WHERE id = $1', [req.params.id]);
@@ -207,10 +219,16 @@ app.get('/api/store/:id/products', async (req, res) => {
 });
 
 app.put('/api/product/:id', async (req, res) => {
-  const { ten, mo_ta, gia, danh_muc, duong_dan_anh } = req.body;
+  const { ten, mo_ta, gia, danh_muc, duong_dan_anh, mo_ta_ai_thu_do } = req.body;
+
   try {
-    await pool.query('UPDATE san_pham SET ten = $1, mo_ta = $2, gia = $3, danh_muc = $4, duong_dan_anh = $5 WHERE id = $6', [ten, mo_ta, gia, danh_muc, duong_dan_anh, req.params.id]);
-    res.sendStatus(204);
+    await pool.query(
+      `UPDATE san_pham 
+       SET ten = $1, mo_ta = $2, gia = $3, danh_muc = $4, duong_dan_anh = $5, mo_ta_ai_thu_do = $6 
+       WHERE id = $7`,
+      [ten, mo_ta, gia, danh_muc, duong_dan_anh, mo_ta_ai_thu_do, req.params.id]
+    );
+    res.sendStatus(204); // No Content
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -725,133 +743,3 @@ app.get('/api/danh-gia/tong-quan', async (req, res) => {
     res.status(500).json({ error: 'Lỗi server khi lấy tổng quan đánh giá' });
   }
 });
-
-
-// //api thử đồ
-// app.get("/api/anh", async (req, res) => {
-//   try {
-//     const input = {
-//       garm_img:
-//         "https://replicate.delivery/pbxt/KgwTlZyFx5aUU3gc5gMiKuD5nNPTgliMlLUWx160G4z99YjO/sweater.webp",
-//       human_img:
-//         "https://replicate.delivery/pbxt/KgwTlhCMvDagRrcVzZJbuozNJ8esPqiNAIJS3eMgHrYuHmW4/KakaoTalk_Photo_2024-04-04-21-44-45.png",
-//       garment_des: "cute pink top",
-//     };
-
-//     const output = await replicate.run(
-//       "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
-//       { input }
-//     );
-
-//     // output là URL -> fetch ảnh
-//     const imageResponse = await fetch(output); // Nếu lỗi, import 'node-fetch'
-//     const buffer = await imageResponse.arrayBuffer();
-//     await writeFile("output.jpg", Buffer.from(buffer));
-
-//     res.send("Image saved as output.jpg");
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send("Có lỗi xảy ra");
-//   }
-// });
-app.post("/api/anh", upload.single("human_img"), async (req, res) => {
-  try {
-    const { garment_des, garm_img } = req.body;
-    const human_img_path = req.file.path;
-
-    // Chuyển ảnh human thành base64
-    const fileBuffer = await fs.readFile(human_img_path);
-    const ext = path.extname(req.file.originalname).slice(1); // ví dụ: 'png'
-    const base64Human = `data:image/${ext};base64,${fileBuffer.toString("base64")}`;
-
-    // Tạo input cho replicate
-    const input = {
-      garm_img: garm_img,             // là URL → dùng trực tiếp
-      human_img: base64Human,        // là base64 của ảnh upload
-      garment_des: garment_des || "default description",
-    };
-
-    const output = await replicate.run(
-      "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
-      { input }
-    );
-
-    // Lấy ảnh từ kết quả output (URL)
-    const imageResponse = await fetch(output);
-    const buffer = await imageResponse.arrayBuffer();
-    await fs.writeFile("output.jpg", Buffer.from(buffer));
-
-    // Xoá file upload tạm
-    await fs.unlink(human_img_path);
-
-    res.send("Image saved as output.jpg");
-  } catch (err) {
-    console.error("Lỗi:", err);
-    res.status(500).send("Có lỗi xảy ra");
-  }
-});
-
-
-app.post('/api/thu-do', upload.single('humanImg'), async (req, res) => {
-  try {
-    // 1️⃣ Kiểm tra ảnh người
-    if (!req.file || !req.file.path) {
-      console.log('❌ Không có ảnh người được upload');
-      return res.status(400).json({ error: 'Ảnh người (humanImg) không hợp lệ' });
-    }
-    const humanImgUrl = req.file.path;
-    console.log('✅ humanImg URL:', humanImgUrl);
-
-    // 2️⃣ Kiểm tra link ảnh sản phẩm
-    const garmImgUrl = req.body.garmImg;
-    if (!garmImgUrl || !garmImgUrl.startsWith('http')) {
-      console.log('❌ Link ảnh quần áo không hợp lệ:', garmImgUrl);
-      return res.status(400).json({ error: 'Link ảnh quần áo (garmImg) không hợp lệ' });
-    }
-    console.log('✅ garmImg URL:', garmImgUrl);
-
-    // 3️⃣ Garment description (nếu có)
-    const garmDesc = req.body.garmentDes || 'a garment';
-    console.log('✅ garmentDes:', garmDesc);
-
-    // 4️⃣ Gọi Replicate API
-    console.log('📤 Gửi request đến Replicate...');
-    const output = await replicate.run(
-      "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
-      {
-        input: {
-          human_img: humanImgUrl,
-          garm_img: garmImgUrl,
-          garment_des: garmDesc,
-        },
-      }
-    );
-
-    console.log('✅ Replicate trả về:', output);
-
-    // 5️⃣ Kiểm tra kết quả
-    if (!output || typeof output !== 'string') {
-      console.log('❌ Kết quả từ Replicate không phải là link ảnh:', output);
-      return res.status(500).json({
-        success: false,
-        message: 'Replicate không trả về ảnh đúng định dạng',
-        output,
-      });
-    }
-
-    // ✅ Trả về ảnh thử đồ
-    return res.json({
-      success: true,
-      outputImage: output,
-    });
-
-  } catch (error) {
-    console.error('❌ Lỗi khi thử đồ:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Đã xảy ra lỗi khi thử đồ',
-      error: error.message,
-    });
-  }
-});
-

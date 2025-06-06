@@ -50,6 +50,7 @@ export default function DashboardProducts({
         gia: product.gia,
         danh_muc: product.danh_muc,
         duong_dan_anh: product.duong_dan_anh,
+        mo_ta_ai_thu_do: product.mo_ta_ai_thu_do, // Thêm dòng này
       })
       setImageUrl(product.duong_dan_anh || "")
     } else {
@@ -204,6 +205,20 @@ export default function DashboardProducts({
       key: "danh_muc",
     },
     {
+      title: "Mô tả AI thử đồ",
+      dataIndex: "mo_ta_ai_thu_do",
+      key: "mo_ta_ai_thu_do",
+      render: (text: string) => (
+        <div className="max-w-xs">
+          {text ? (
+            <span className="text-gray-700">{text}</span>
+          ) : (
+            <span className="text-gray-400 italic">Chưa có mô tả</span>
+          )}
+        </div>
+      ),
+    },
+    {
       title: "Giá",
       dataIndex: "gia",
       key: "gia",
@@ -294,6 +309,14 @@ export default function DashboardProducts({
           <Form.Item name="mo_ta" label="Mô tả" rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}>
             <Input.TextArea rows={4} />
           </Form.Item>
+
+          <Form.Item name="mo_ta_ai_thu_do" label="Mô tả AI thử đồ">
+            <Input.TextArea
+              rows={3}
+              placeholder="Mô tả chi tiết về sản phẩm để AI thử đồ hoạt động tốt hơn (ví dụ: áo sơ mi nam màu xanh, chất liệu cotton...)"
+            />
+          </Form.Item>
+
           <Form.Item name="gia" label="Giá" rules={[{ required: true, message: "Vui lòng nhập giá" }]}>
             <InputNumber
               formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -301,6 +324,7 @@ export default function DashboardProducts({
               style={{ width: "100%" }}
             />
           </Form.Item>
+
           <Form.Item name="danh_muc" label="Danh mục" rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}>
             <Select>
               <Option value="áo">Áo</Option>
@@ -312,47 +336,31 @@ export default function DashboardProducts({
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="duong_dan_anh"
-            label="Hình ảnh sản phẩm"
-            rules={[{ required: true, message: "Vui lòng tải lên hình ảnh hoặc nhập đường dẫn" }]}
-          >
-            <div className="space-y-4">
-              <Upload
-                name="image"
-                listType="picture-card"
-                className="avatar-uploader"
-                showUploadList={false}
-                beforeUpload={beforeUpload}
-                maxCount={1}
-              >
-                {imageUrl ? (
-                  <img
-                    src={imageUrl || "/placeholder.svg"}
-                    alt="product"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  uploadButton
-                )}
-              </Upload>
-
-              <Input
-                placeholder="Hoặc nhập đường dẫn ảnh"
-                value={imageUrl}
-                onChange={(e) => {
-                  setImageUrl(e.target.value)
-                  form.setFieldsValue({ duong_dan_anh: e.target.value })
-                  setImageFile(null)
-                }}
-              />
-
-              {imageFile && (
-                <div className="text-sm text-gray-500">
-                  File: {imageFile.name} ({(imageFile.size / 1024).toFixed(2)} KB)
-                </div>
+          <Form.Item label="Hình ảnh sản phẩm" rules={[{ required: true, message: "Vui lòng tải lên hình ảnh" }]}>
+            <Upload
+              name="image"
+              listType="picture-card"
+              className="avatar-uploader"
+              showUploadList={false}
+              beforeUpload={beforeUpload}
+              maxCount={1}
+            >
+              {imageUrl ? (
+                <img
+                  src={imageUrl || "/placeholder.svg"}
+                  alt="product"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                uploadButton
               )}
-            </div>
+            </Upload>
+
+            {imageFile && (
+              <div className="text-sm text-gray-500 mt-2">
+                File: {imageFile.name} ({(imageFile.size / 1024).toFixed(2)} KB)
+              </div>
+            )}
           </Form.Item>
         </Form>
       </Modal>

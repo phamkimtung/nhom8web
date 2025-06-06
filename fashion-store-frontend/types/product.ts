@@ -7,6 +7,7 @@ export interface Product {
   danh_muc: string
   duong_dan_anh: string
   tao_luc: string
+  mo_ta_ai_thu_do?: string // Thêm trường mô tả AI thử đồ
   danh_gia_trung_binh?: number // Thêm trường đánh giá trung bình
   ten_cua_hang?: string // Thêm tên cửa hàng (optional)
 }
